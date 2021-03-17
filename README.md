@@ -1,0 +1,2 @@
+# Heart-Disease-Prediction-and-Indicators
+In this project we have used the methods of Hypothesis Testing to test an hypothesis related to the heart disease like whether higher age contributes in a higher probability of heart disease or not. We have used the methods of logistic regression and classification using decision trees to build a model using our training dataset and predict on the test dataset and observe the accuracy rate of our built model.
