@@ -1,0 +1,540 @@
+---
+title: "Heart Disease Prediction and Indicators"
+output: html_notebook
+---
+##### Authors
+####Priyanka Nagesh Adiga
+####Anubhav Saha
+##### Instructor: Vladimir Shapiro
+
+
+### Introduction
+
+Heart Disease or Cardiovascular disease is a class of disease that involves the heart and the blood vessels. Cardio vascular diseases are the leading causes of death all over the world. In this project, primarily, we have conducted the preliminary analysis of  the heart disease data set. The primary objective of this analysis is to analyze the data for distribution, outliers and various other anomalies in the dataset. This will enable us to direct specific testing of the hypothesis and understanding the data through graphical visualizations. 
+
+
+### Goals and techniques used in this project
+
+With this project we are planning to use our acquired skills of Intermediate Analytics in order to uncover useful aspects of the data under analysis. For this project, we've chosen the dataset of heart disease that includes 14 variables into play. We plan to use the methods of Hypothesis Testing to test several hypotheses related to the heart disease like whether higher age contributes in a higher probability of heart disease and so on.
+We also plan on using the method of Classification using decision trees to build a model using our training dataset and predict on the test dataset and observe the accuracy rate of our built model. Decision trees have been used to build the model as they provide accurate results along with a well detailed visualization to compare the results.
+
+
+
+*The objective of this data analysis is to* 
+1. Get an overview of the heart disease dataset.
+2. Check the data set for any available missing values, outliers or any other anomalies.
+3. Discover patterns or relationship between variables in data set. 
+4. Check the underlying assumptions in the data set if any. 
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(broom)
+
+
+```
+
+
+Data
+```{r}
+heart <- read.csv(file.choose())
+```
+
+```{r}
+head(heart)
+sum(is.na(heart))
+colnames(heart)[1]<-"age" #renaming the first coloumn as 'age
+str(heart) #structure of the data set
+
+
+```
+
+From the data set we can see that it consists of the below columns,
+he dataset contains several columns which are as follows -
+
+age : age in years
+sex : (1 = male; 0 = female)
+cp : chest pain type
+trestbps : resting blood pressure (in mm Hg on admission to the hospital)
+chol : serum cholesterol in mg/dl
+fbs : (fasting blood sugar > 120 mg/dl) (1 = true; 0 = false)
+restecg : resting electrocardiographic results
+thalach : maximum heart rate achieved
+exang : exercise induced angina (1 = yes; 0 = no)
+oldpeak : ST depression induced by exercise relative to rest
+slope : the slope of the peak exercise ST segment
+ca : number of major vessels (0-3) colored by flourosopy
+thal : 3 = normal; 6 = fixed defect; 7 = reversable defect
+target : 1 or 0
+
+The five number summary for the same is as given below. 
+```{r}
+summary(heart)
+
+```
+
+
+
+```{r}
+#storing the values as factors
+
+heart$sex=as.factor(heart$sex)
+heart$cp=as.factor(heart$cp)
+heart$fbs=as.factor(heart$fbs)
+heart$exang=as.factor(heart$exang)
+heart$restecg=as.factor(heart$restecg)
+heart$slope=as.factor(heart$slope)
+heart$thal=as.factor(heart$thal)
+heart$target=as.factor(heart$target)
+
+str(heart)
+
+
+```
+finally we are labeling the data for easy future analysis as below. 
+
+
+```{r}
+#sex
+levels(heart$sex)[levels(heart$sex)==0]="Female"
+levels(heart$sex)[levels(heart$sex)==1]="Male"
+
+#fbs
+levels(heart$fbs)[levels(heart$fbs)==0]="Fasting Blood Sugar <= 120"
+levels(heart$fbs)[levels(heart$fbs)==1]="Fasting Blood Sugar > 120"
+
+#thal
+levels(heart$thal)[levels(heart$thal)==0]="No Thalassemia"
+levels(heart$thal)[levels(heart$thal)==1]="Normal Thalassemia"
+levels(heart$thal)[levels(heart$thal)==2]="Fixed Defect Thalassemia"
+levels(heart$thal)[levels(heart$thal)==3]="Reversible Defect Thalassemia"
+
+#target
+levels(heart$target)[levels(heart$target)==0]="Healthy"
+levels(heart$target)[levels(heart$target)==1]="Heart Disease"
+
+#exang
+levels(heart$exang)[levels(heart$exang)==1]="Exercise Induced Angina"
+levels(heart$exang)[levels(heart$exang)==0]="No Exercise Induced Angina"
+
+#cp
+levels(heart$cp)[levels(heart$cp)==0]="Asymptomatic"
+levels(heart$cp)[levels(heart$cp)==1]="Atypical Angina"
+levels(heart$cp)[levels(heart$cp)==2]="Non-anginal Pain"
+levels(heart$cp)[levels(heart$cp)==3]="Typical Angina"
+
+#restecg
+levels(heart$restecg)[levels(heart$restecg)==0]="Probable/definite left ventricular hypertrophy"
+levels(heart$restecg)[levels(heart$restecg)==1]="Normal"
+levels(heart$restecg)[levels(heart$restecg)==2]="ST-T wave abnormality"
+
+#slope
+levels(heart$slope)[levels(heart$slope)==0]="Downsloping"
+levels(heart$slope)[levels(heart$slope)==1]="Flat"
+levels(heart$slope)[levels(heart$slope)==2]="Upsloping"
+
+sum(is.na(heart))
+summary(heart)
+
+```
+
+
+
+#### Data Visualization
+
+The below plot depicts the Number of observations of patients who are Healthy as well as Heart Disease cases
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+
+The plot of the 'Age' predictor variable among the healthy and Heart Disease cases. From the plots we can conclude that the heart disease is not age specific is uniformly spread across all Ages
+
+
+```{r fig.width=10}
+ggplot(heart,aes(age, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(20,80, by=1), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))+
+  xlab("Age") +
+  ylab("Density / Count") +
+  ggtitle("Effect of Age")
+
+```
+
+
+The below plot is constructed to understand implications of heart on Heart Disease patients. From the graph below, we can see that patients who have heart disease have higher maximum heart rate than healthy patients.
+
+
+```{r}
+ggplot(heart,aes(thalach, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(70, 210, by=5), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))+
+  xlab("Maximum Heart Rate Achieved") +
+  ylab("Density / Count") +
+  ggtitle("Max Heart Rate Histogram")
+```
+
+
+The plot is constructed to determine the implication of 'sex' predictor variable on the heart disease case. From the plot we can see that more female patients have encountered Heart Disease as compared to male patients.An alternative overlapping histogram provides a clear comparison on the same. 
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~sex, ncol=2,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+
+hist_age <- ggplot(heart, aes(age, fill = sex))+geom_histogram(bins = 30)+theme_classic()+scale_color_brewer(palette="Set1")+scale_fill_brewer(palette = "Set1")+theme(plot.background = element_rect(fill = "grey"))+labs(title = "Histogram of age variable with sex", x = "age", y = "count")
+hist_age
+```
+
+
+The below plot is constructed to know the effect of chest pain type on patients.WE can see that more Heart Disease patients have chest pain type 1 or 2.
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~cp, ncol=2,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2")) 
+
+
+```
+
+
+The below plot is constructed to determine whether restecg has any significant effect on patients who encounter heart disease. We can see that patients with Rest ECG 1 have more Heart Diseases.
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~restecg, ncol=3,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+
+The plot is constructed to know the effect of exang predictor variable on the heart disease. We can see that Peak exercise ST Slope 2 have more Heart Disease as compared to other kinds. 
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~exang, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+
+The below plot is constructed in order to determine whether ECG has any significant effect in inducing heart disease in patients and we can see that there is no major difference in Rest ECG for Healthy and Heart Disease patients
+
+
+```{r}
+ggplot(heart,aes(trestbps, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(90,200, by=5), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2")) +
+  xlab("Resting Blood Pressure (in mm Hg on admission to the hospital") +
+  ylab("Density / Count") +
+  ggtitle("Rest ECG Histogram")
+```
+
+The below plot is constructed to determine the effect of cholesterol on heart disease in patients.More Heart Disease patients seem to have cholesterol between 200 and 250 mg/d as we can see below. 
+
+
+```{r}
+ggplot(heart,aes(chol, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(100, 600, by=25), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2")) +
+  xlab("Serum Cholesterol in mg/dl") +
+  ylab("Density / Count") +
+  ggtitle("Cholesterol Histogram")
+```
+
+
+We have constructed the below plot in order to know whether there exists any significant effect of predictor variable ST depression on heart disease in patients. We can see that,more Heart Disease patients have ST depression of 0.1
+
+
+```{r}
+ggplot(heart,aes(oldpeak, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(0, 7, by=0.3), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2")) +
+  ggtitle("ST Depression Histogram") +
+  xlab("ST Depression Induced by Exercise Relative to Rest") +
+  ylab("Density / Count")
+```
+
+
+From the below plot constructed we can see that almost all of the patients who have Heart Disease have 0 major vessels as observed by Fluroscopy.
+
+
+```{r}
+ggplot(heart,aes(ca, fill=target)) +
+  geom_histogram(aes(y=..density..),breaks=seq(0, 5, by=0.8), color="grey17") +
+  geom_density(alpha=.1, fill="black")+
+  facet_wrap(~target, ncol=1,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2")) +
+  ggtitle("No. Major Vessels Histogram") +
+  xlab("Number of Major Vessels (0-3) Colored by Flourosopy") +
+  ylab("Density / Count")
+
+```
+
+From the plot to determine the effect of fasting blood sugar on heart disease , we can see that there is no significant effect of fasting blood sugar on heart disease in patients.
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~fbs, ncol=2,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+
+From the plot we can see that more patients with no exercise induced angina have Heart Diseases.
+
+```{r}
+
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~fbs, ncol=2,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+
+The plot suggests that the effect of Fixed defect thalasemia is significant in inducing heart disease.
+
+
+```{r}
+ggplot(heart,aes(target, fill=target)) +
+  geom_bar(stat="count") +
+  facet_wrap(~thal, ncol=2,scale="fixed") +
+  scale_fill_manual(values=c("springgreen2","firebrick2"))
+```
+
+#### Logistic Regression
+
+For heart disease prediction we are using logistic regression as it is one of the most powerful statistical way of modeling a binomial outcome with one or more explanatory variables.It measures the relationship between the dependent and one or more independent variables by estimating probabilities using a logistic function, which is nothing but cumulative logistic distribution.This regression typically will help us to understand how the value of the dependent variables (target) changes when one of the independent variables (age,sex,cp etc) is adjusted and others are held fixed.
+
+For our data set considered, we have used the glm() function, that is generalized linear models in order to fit the logistic regression model. The glm() function intakes the target (output) variable, the data set we are working on as well as family arguments as its inputs. Here, the argument family is set to binomial so that the function recognizes that we are performing a logistic regression and not any other kind of regression. 
+
+Using logistic regression to filter out important variables.
+
+```{r}
+logisticReg=glm(target~., data=heart, family=binomial)
+summary(logisticReg)
+```
+REDOOOOOOOO
+The summary() function as we can see has returned the estimate,standard error,z-score and p-values on each of the co-efficient.
+
+For every data point which we have used in our model, the deviance associated with that point is calculated. Having done this each point wee have a set of such residuals and 'Deviance Residuals' is providing us a non-parametric description of their distribution.
+
+Under the co-efficient section we can see for each of the predictor variables the 'Estimate' is providing us the co-efficient associated with them. Which is nothing but the estimated amount by which the log odds of target would increase if for example variable age were one unit higher, next column is providing the standard error associated with this estimate. that is provide us an estimate of how much , on an average, these estimates would change if we were to rerun the entire study identically with new data over and over again. if we were to divide the estimate by standard error we will be getting a quotient which is assumed to be normally distributed whenever the sample is large enough. this value is given by z-value above. Further, the Pr(>|z|) are the two tailed p-values that corresponds to the z-values in a standard normal distribution. 
+
+Further,we can also see certain predictor variables have '*' in front of them stating their significance in the model. 
+
+The 'Residual deviance' is a measure of the lack of fit of our model as a whole and 'Null deviance' is such a measure for a reduced model that only includes intercept. Based on the number of predictor variables that were estimated in the model, those many number of degrees of freedom has been consumed in their calculation. which is shown in the deviance section. 
+
+Also, the AIC(Akaike information criterion) is another measure of goodness of fit that takes into account the ability of the model to fit the data, this will enable us to judge which model is better later in the document when we perform similar modeling again. model with lower AIC is doing a better job describing the variance in the data. 
+
+Lastly, the fisher scoring iteration refers to how the model was estimated, this model has been solved by the 'Newton-Raphson algorithm'.Mostly, the model is fit based on a guess about what the estimates might be.Then algorithm then looks around to see if the fit would be improved by using different estimates instead.if so it moves in that direction,finally the algorithm stops when it doesn't perceive that moving again would yield any additional improvement. From the output we can see that we have had 6 iterations before the process stopped and we got the output results. 
+
+
+From the output above we can see that of all the predictors, the model has recognized sex,cp,exang,oldpeak,ca and target as important predictors.All the important vectors are now stored in a vector for further analysis.
+
+Considering only important variables
+```{r}
+data_imp=heart[,c(2,3,9,10,12,14)]
+summary(data_imp)
+```
+The summary function of the important predictors has returned us the count of each kind of variable withing the predictors. From the output we can see details such as there are 96 females and 207 males, the exang predictor has two variables and 204 patients have no exercise induced angina whereas 99 of the patients recorded exercise induced angina.
+
+We have once again used the gml() function so as to re-iterate the process and 
+
+```{r}
+
+logisticReg=glm(target~.,data=data_imp,family=binomial)
+summary(logisticReg)
+logisticReg.df=tidy(logisticReg)
+```
+After considering only important [predictor variables form the above output we can confirm that all the predictor variables are now significant and the number of iteration that has taken to fit the model is less compared to our earlier model. 
+
+plotting the results obtained from logistic regression , we are using the mutate() function in order to create a new variable 'term' which will re-organize our data frame so as to include the 'estimates' of our model.the revised data frame is then used to plot using the ggplot() function as below.  
+```{r}
+logisticReg.df %>%
+  mutate(term=reorder(term,estimate)) %>%
+  ggplot( aes(term,estimate, fill=estimate)) +
+  geom_bar(stat="identity") +
+  scale_fill_gradient(low="firebrick2", high="springgreen2") +
+  geom_hline(yintercept=0) +
+  coord_flip()
+```
+From the plot we can see,
+If the patient has chest pain which is either a Non anginal Pain or a Typical Anginal pain the probability of them having Heart Disease increases.
+Further,greater the number of blood vessels that are visible by fluroscopy(ca) lesser the chances of that patient having a heart disease. 
+Also, higher the ST Depression (oldpeak) observed in a patient, lower the chances of him/her having Heart Disease
+If a patient has exercise induced angina, then the probability of them having Heart Disease reduces
+lastly,if the patient is a male, then there is a less chance of him having a Heart Disease. 
+
+For further analysis,a plot of effect of ST depression in male and female patients in inducing heart disease has been plotted as below using ggplot() function, further stat_smooth() function has been used so as to enable smooth lines whenever there is over plotting. 
+```{r}
+ggplot(heart, aes(oldpeak, as.numeric(target)-1,color=sex )) +
+  stat_smooth(method="glm",  formula=y~x,
+              alpha=0.2, size=1, aes(fill=sex)) +
+  ylim(-1,1)
+```
+From the plot we can see that the as ST depression rises, chances of a patient having heart disease reduces.
+
+Another plot in order to understand the effect of number of blood vessels observed by fluroscopy in the blood samples of males and female patients on heart disease. Similar to previous plot, we have used ggplot() function in order to plot the data with stat_smooth function so as to smooth the lines to avoid over plotting.
+
+```{r}
+ggplot(heart, aes(ca, as.numeric(target)-1, color=sex)) +
+  stat_smooth(method="glm",  formula=y~x,
+              alpha=0.2, size=1, aes(fill=sex)) +
+  ylim(-1,1)
+```
+From the plot we can observe that as the number of blood vessels observed by fluroscopy in the blood sample of an individual increases,the probability of heart disease in that individual decreases. 
+```{r}
+data=data_imp
+set.seed(1237)
+train=sample(nrow(data), .8*nrow(data), replace = FALSE)
+TrainSet=data[train,]
+ValidSet=data[-train,]
+
+#Tuning parameters
+fitControl=trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 10,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary)
+
+
+TrainSet$target=make.names(TrainSet$target)
+set.seed(142)
+TrainSet$target=as.factor(TrainSet$target)
+```
+
+
+
+logistic regression with train function in caret package
+
+```{r}
+logisticReg_train=caret::train(target ~ ., 
+                                      data = TrainSet ,
+                                      method = "glm", 
+                                      trControl = fitControl,
+                                      metric="ROC")
+
+logisticReg_train
+```
+
+Variable importance. We see that ST Depression is the most important variable followed by Chest Pain Type and No. of Vessels
+
+
+```{r}
+varImp(logisticReg_train)
+```
+Test on predict test
+```{r}
+logisticReg_pred <- predict(logisticReg_train,ValidSet)
+levels(logisticReg_pred)[2] <- "Heart Disease"
+
+table_pred<-table(logisticReg_pred, ValidSet$target)
+table_pred.df<-as.data.frame(table_pred)
+
+result_pred<-caret::confusionMatrix(table_pred, positive="Heart Disease")
+result_pred
+```
+Confusion Matrix for logistic regression
+```{r}
+ggplot(data = table_pred.df, aes(x = Var2, y = logisticReg_pred, label=Freq)) +
+  geom_tile(aes(fill = Freq)) +
+  scale_fill_gradient(low="firebrick2", high="springgreen2") +
+  xlab("Actual Heart Disease") +
+  ylab("Predicted Heart Disease") +
+  geom_text(size=8) +
+  ggtitle("Logistic Regression")
+```
+
+### Decision tree
+
+Another approach which we considered in order to determine whether a certain individual has heart disease based on various predictor variables is decision tree.A decision tree algorithm primarily works on the grounds of recursive partitioning.In this technique we will be repeatedly partitioning the predictor variables into multiple sub-levels based on their significance,such that the outcome in each sub-level is as homogeneous as possible. The output obtained with such a method thus will contain a set of rules made up of different predictor/input variables which can be used in predicting the outcome/target variable in our case healthy/heart disease. 
+
+To begin with, we have used the expand.grid() function which creates a data frame which is the Cartesian product of its arguments. Here it is primarily used to plot predicted responses over various combinations of values for predictor variables in our data set.Further, trainControl function is used in order to control the computational nuances of the train function.We have used 'repeatedcv' method in order to get repeated training/test splits, with 10 folds cross validation. We have also enabled the calculation of class probabilities for the decision tree classification model and lastly we have used twoclasssummary function in order to compute the performance metric across the resamples. 
+
+```{r}
+Tree_Grid=expand.grid(cp=c(0.01))
+fitControl=trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 10,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary)
+
+data_imp$target=make.names(data_imp$target) 
+
+decisiontree_train = caret::train(target ~ ., 
+                                      data = data_imp ,
+                                      method = "rpart", 
+                                      trControl = fitControl,
+                                      metric="ROC",
+                                      tuneGrid=Tree_Grid)
+decisiontree_train
+```
+From the output we can see that the train function has provided us the 5 significant predictor variables as well as the two target classes that we have considered healthy and heart disease.We have also received a summary of our sample sizes considered in the training set. 
+
+Further, we have obtained the area under the ROC curve ,which represents the models ability to discriminate between the positive and negative classes.A ROC value of 0.824 means that the model made all the predictions pretty perfectly.Secondly,sensitivity(true positive rate) refers to the number of instances from the positive class that was actually predicted correctly and a sensitivity value of 0.7490 states that our model did a pretty good job in predicting the true positives.lastly we have specificity(true negative rates) which is the number of instances from the negative class that were actually predicted correctly and a sensitivity value of 0.84 means that the model succeeded in predicting most of the true negatives in our data set.
+
+In order to determine the importance of variables in the object'decisiontree_train' produced by our train function we are using Rs built-in 'varImp() function which has taken in the training set predictors as its data argument. 
+```{r}
+varImp(decisiontree_train)
+```
+WE can see that the function has returned the importance of various predictor variables in the data set. 
+
+Finally with the help of the rpart.plot() function we are plotting the decision tree as below. 
+
+
+
+```{r}
+rpart.plot(decisiontree_train$finalModel,   
+           type=5,
+           fallen.leaves = FALSE,
+           box.palette = "GnRd",
+           nn=TRUE)
+```
+From the output we can make the following observations
+Deeper the color red on leaf nodes, higher the probability for a patient with characteristic leading to that lead node having a Heart Disease
+Deeper the green on a leaf node, the chances of being healthy are more for that patient. 
+ca is the most prominent predictor variable and Number of major blood vessels (0-3) colored by flourosopy
+and oldpeak: ST depression induced by exercise relative to rest is second most prominent predictor. 
+
+We can make predictions such as ,If no. of vessels >= 1 AND ST depression < 0.55 and he/she has a non-anginal chest pain, then there is a 93% chance for that patient having a Heart Disease
+Similarly doctors can take a decision based on these parameters whether there is a chance of Heart Disease in the future
+
+### Conclusion
+
+We can see that only a few of the parameters significantly have an effect on Heart Disease.
+Gender, Chest Pain Type, Exercise Induced Angina, ST Depression & No. of vessels observed by fluroscopy are the only variables that have a significant effect on Heart Disease.
+The rest of the parameters can be excluded and dropped from our analysis.
+
+
+###References
+
+The dataset has been retrieved from:
+https://archive.ics.uci.edu/ml/datasets/Heart+Disease
+https://www.kaggle.com/ronitf/heart-disease-uci
+
+[1]https://stats.stackexchange.com/questions/86351/interpretation-of-rs-output-for-binomial-regression
